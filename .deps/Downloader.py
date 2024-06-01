@@ -538,7 +538,7 @@ if __name__ == "__main__":
                 args.type,
                 args_catalog,
                 args.pathserver,
-                args.pathlocal,
+                args.pathlocal.split("/")[0],
                 int(args_fromindex),
                 int(args_toindex),
                 args.mode,
