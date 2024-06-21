@@ -186,9 +186,9 @@ def handle_card(assets, path_local: str,  app_type: str, assetBundleName: str) -
         if re.match(matcher, asset_name):
             member_data = get_member_data_from_asset()
 
-            if member_data and (member_data[0]["gen"] == "1" or member_data[0]["gen"] == "2"):
-                print(f"skip gen 1,2 {asset_name}")
-                return {FILENAME: asset_name, RESOURCE_TYPE: ResourceType.CARD.value}
+            # if member_data and (member_data[0]["gen"] == "1" or member_data[0]["gen"] == "2"):
+            #     print(f"skip gen 1,2 {asset_name}")
+            #     return {FILENAME: asset_name, RESOURCE_TYPE: ResourceType.CARD.value}
 
             folder_path = get_folder_path(app_type)
             if not os.path.exists(folder_path):
