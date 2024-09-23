@@ -164,7 +164,6 @@ def handle_card(assets, path_local: str,  app_type: str, assetBundleName: str) -
         folder_path = (
             os.path.join(
                 path_local,
-                f"{member_data[0]['gen']}{member_data[0][app_type]}. {member_data[0]['name']}",
             )
             if member_data
             else os.path.join(path_local, "00. 不特定")
