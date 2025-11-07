@@ -73,7 +73,8 @@ def downloader_mode_5(
     downloaded_dict = get_downloaded_dict(download_log_file_name)
     for assetBundle in filtered_data:
         assetBundleName = assetBundle["assetBundleName"]
-        if is_downloaded(assetBundleName, downloaded_dict):
+        fileHash = assetBundle["fileContentHash"]
+        if is_downloaded(assetBundleName, downloaded_dict, fileHash):
             continue
         result = executor(assetBundleName, urlserver,
                           path_local, asset_type.split("_")[0], mode)
@@ -82,7 +83,7 @@ def downloader_mode_5(
         if result is not None:
             filename = result[FILENAME] if FILENAME in result else ""
             resource_type = result[RESOURCE_TYPE] if RESOURCE_TYPE in result else ""
-        line = f"{assetBundleName}|{resource_type}|{filename}\n"
+        line = f"{assetBundleName}|{resource_type}|{filename}|{fileHash}\n"
         file.write(line)
     file.close()
 
@@ -145,22 +146,24 @@ def handle_card(assets, path_local: str,  app_type: str, assetBundleName: str) -
             data
             for data in (
                 s46_member_data
-                if "sakukoi" in app_type
+                if app_type == "sakukoi"
                 else h46_member_data
             )
-            if not data[app_type.split("_")[0]] == ""
+            if not data[app_type] == ""
             and re.search(
-                f"{data['gen']+data[app_type.split('_')[0]]}",
+                f"{data['gen']+data[app_type]}",
                 asset_name[0:3]
                 if len(asset_name) <= 5
                 else asset_name[3:6]
-                if 6 <= len(asset_name) <= 10
+                if 6 <= len(asset_name) <= 10 and "_" in asset_name
+                else asset_name[5:8]
+                if len(asset_name) == 10
                 else "000",
             )
         ]
         return member_data
 
-    def get_folder_path(app_type: str):
+    def get_folder_path(member_data: list | None):
         folder_path = (
             os.path.join(
                 path_local,
@@ -170,18 +173,22 @@ def handle_card(assets, path_local: str,  app_type: str, assetBundleName: str) -
         )
         return folder_path
 
-    for asset in assets.objects:
+    texture2D = list(filter(lambda x: x.type.name ==
+                     "Texture2D", assets.objects))
+
+    for index, asset in enumerate(texture2D):
         if asset.type.name != "Texture2D":
             continue
 
         asset_name = asset.read().name
 
         matcher = (
-            r"(^\d{7}_|^\d{3}$|^\d{3}_)"
+            r"(^\d{7}_|^\d{3}$|^\d{3}_|^\d{10}$)"
             if app_type == "sakukoi"
             else r"(^\d{8}_\d|^\d{3}_\d$)"
         )
 
+        member_data = None
         if re.match(matcher, asset_name):
             member_data = get_member_data_from_asset()
 
@@ -189,33 +196,38 @@ def handle_card(assets, path_local: str,  app_type: str, assetBundleName: str) -
             #     print(f"skip gen 1,2 {asset_name}")
             #     return {FILENAME: asset_name, RESOURCE_TYPE: ResourceType.CARD.value}
 
-            folder_path = get_folder_path(app_type)
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
+        folder_path = get_folder_path(member_data)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
 
-            print(f"save {asset_name} to {folder_path}")
+        print(f"save {asset_name} to {folder_path}")
 
-            filename = os.path.join(folder_path, f"{asset_name}.png")
+        filename = os.path.join(folder_path, f"{asset_name}.png")
+        file_exists = os.path.exists(filename)
+        if file_exists:
+            print(
+                f"\x1b[38;5;11m{filename} already exist\x1b[0m"
+            )
+            filename = os.path.join(
+                folder_path, f"{asset_name}-{assetBundleName.split('/')[-1]}.png")
+            print(f"rename to {filename}")
             file_exists = os.path.exists(filename)
-            if file_exists:
-                print(
-                    f"\x1b[38;5;11m{filename} already exist\x1b[0m"
-                )
-                filename = os.path.join(
-                    folder_path, f"{asset_name}-{assetBundleName.split('/')[-1]}.png")
-                print(f"rename to {filename}")
-                file_exists = os.path.exists(filename)
 
-            if file_exists:
-                print(
-                    f"\x1b[38;5;11m{filename} still exist after rename... skip this file\x1b[0m"
-                )
-                continue
+        if file_exists:
+            print(
+                f"\x1b[38;5;11m{
+                    filename} still exist after rename... skip this file\x1b[0m"
+            )
+            continue
 
+        try:
             asset.read().image.save(
                 os.path.join(folder_path, filename)
             )
             print(f"{asset_name} saved!")
+        except Exception as e:
+            print(e)
+        if member_data or index == len(texture2D) - 1:
             return {FILENAME: asset_name, RESOURCE_TYPE: ResourceType.CARD.value}
 
 
@@ -229,10 +241,15 @@ def get_downloaded_dict(download_log_file_name: str) -> dict[str, str]:
     return dict
 
 
-def is_downloaded(name: str, dict: dict[str, str]):
-    if name in dict:
+def is_downloaded(name: str, dict: dict[str, str], fileHash: str):
+    if name not in dict:
+        return False
+    items = dict[name].split('|')
+    if len(items) == 3:
         return True
-    return False
+    if items[3] != fileHash:
+        return False
+    return True
 
 
 def create_download_log_files(name: str):

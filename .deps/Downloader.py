@@ -535,7 +535,7 @@ if __name__ == "__main__":
         args_toindex = args.toindex if args.toindex else "0"
         try:
             downloader_mode_5(
-                args.type,
+                args.type.split("_")[0],
                 args_catalog,
                 args.pathserver,
                 args.pathlocal.split("/")[0],
