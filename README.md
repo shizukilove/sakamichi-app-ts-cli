@@ -417,3 +417,8 @@ This application is provided under the MIT License.
 Please be aware of the following items in Article 8 (Prohibited Activities) of the App's Terms of Use:
 - (16) Acts of accessing or attempting to access this service by means other than those specified by the company
 - (17) Acts of accessing or attempting to access this service using automated methods (including crawlers and similar technologies)
+
+```mermaid
+flowchart TD
+    db([DB])
+```
